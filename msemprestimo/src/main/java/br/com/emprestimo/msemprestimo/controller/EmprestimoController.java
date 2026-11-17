@@ -2,6 +2,7 @@ package br.com.emprestimo.msemprestimo.controller;
 
 import br.com.emprestimo.msemprestimo.dto.EmprestimoRequest;
 import br.com.emprestimo.msemprestimo.dto.EmprestimoResponse;
+import br.com.emprestimo.msemprestimo.dto.DevolucaoRequest;
 import br.com.emprestimo.msemprestimo.service.EmprestimoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -42,8 +43,8 @@ public class EmprestimoController {
 
     /** RF07 — registrar devolução. 200 · 404 · 409 já devolvido/cancelado · 503. */
     @PatchMapping("/{id}/devolucao")
-    public EmprestimoResponse devolver(@PathVariable UUID id) {
-        return service.devolver(id);
+    public EmprestimoResponse devolver(@PathVariable UUID id, @RequestBody @Valid DevolucaoRequest request) {
+        return service.devolver(id, request.condicao());
     }
 
     /** Extra: cancelar empréstimo ativo. */

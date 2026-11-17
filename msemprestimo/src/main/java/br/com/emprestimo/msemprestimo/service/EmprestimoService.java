@@ -2,6 +2,7 @@ package br.com.emprestimo.msemprestimo.service;
 
 import br.com.emprestimo.msemprestimo.client.EquipamentoClient;
 import br.com.emprestimo.msemprestimo.client.UsuarioClient;
+import br.com.emprestimo.msemprestimo.client.CondicaoEquipamentoRequest;
 import br.com.emprestimo.msemprestimo.client.dto.EquipamentoResponse;
 import br.com.emprestimo.msemprestimo.dto.EmprestimoRequest;
 import br.com.emprestimo.msemprestimo.dto.EmprestimoResponse;
@@ -94,17 +95,24 @@ public class EmprestimoService {
     }
 
     /**
-     * RF07 — devolução. Ordem: primeiro libera, depois grava DEVOLVIDO.
+     * RF07 — devolução. Ordem: primeiro altera condição, depois libera, depois grava DEVOLVIDO.
+     * - Se a alteração de condição falhar por indisponibilidade, a devolução não é concluída.
      * - Se a liberação falhar, o empréstimo continua ATIVO e a devolução pode ser repetida.
      * - Se a liberação der certo e a gravação falhar, repetir é seguro: a liberação é idempotente.
      * - Um empréstimo já DEVOLVIDO é recusado antes de qualquer chamada: nunca libera duas vezes.
+     * RF12 — Antes de finalizar a devolução, altera a condição do equipamento via Feign Client.
      */
-    public EmprestimoResponse devolver(UUID id) {
+    public EmprestimoResponse devolver(UUID id, String condicao) {
         Emprestimo emprestimo = buscarAtivo(id, "devolvido");
+
+        // RF12 — Altera a condição do equipamento antes de liberar
+        // Se falhar por indisponibilidade (503), a devolução não é concluída
+        alterarCondicaoEquipamento(emprestimo.getEquipamentoId(), condicao);
+
         liberarEquipamento(emprestimo);
         emprestimo.devolver(LocalDateTime.now(clock));
         Emprestimo salvo = repository.saveAndFlush(emprestimo);
-        log.info("Empréstimo {} devolvido", id);
+        log.info("Empréstimo {} devolvido com condição {}", id, condicao);
         return EmprestimoResponse.de(salvo);
     }
 
@@ -191,6 +199,29 @@ public class EmprestimoService {
             log.error("COMPENSAÇÃO FALHOU: o equipamento {} pode ter ficado reservado para o empréstimo {}, que não existe. "
                     + "Corrigir com DELETE /api/v1/equipamentos/{}/reservas/{}",
                     equipamentoId, emprestimoId, equipamentoId, emprestimoId, e);
+        }
+    }
+
+    /**
+     * RF12 — Altera a condição do equipamento via Feign Client com Circuit Breaker.
+     * Se o serviço estiver indisponível, o Circuit Breaker aciona o fallback que lança ServicoIndisponivelException.
+     * Erros de negócio (404) não são tratados aqui pois são ignorados pelo Circuit Breaker.
+     */
+    private void alterarCondicaoEquipamento(UUID equipamentoId, String condicao) {
+        try {
+            CondicaoEquipamentoRequest request = new CondicaoEquipamentoRequest(condicao);
+            equipamentoClient.alterarCondicao(equipamentoId, request);
+            log.info("Condição do equipamento {} alterada para {}", equipamentoId, condicao);
+        } catch (ServicoIndisponivelException e) {
+            // Lançada pelo fallback do Circuit Breaker quando o serviço está indisponível
+            log.error("Serviço msequipamento indisponível para alterar condição do equipamento {}", equipamentoId, e);
+            throw e;
+        } catch (FeignException.NotFound e) {
+            // Equipamento não existe no msequipamento: erro de negócio, não abre o circuito
+            throw new RecursoNaoEncontradoException("Equipamento " + equipamentoId + " não encontrado");
+        } catch (FeignException e) {
+            // Outros erros Feign (não tratados pelo Circuit Breaker)
+            throw new ServicoIndisponivelException("Não foi possível alterar a condição do equipamento no msequipamento", e);
         }
     }
 }

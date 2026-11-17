@@ -1,6 +1,7 @@
 package br.com.msequipamento.msequipamento.service;
 
 import br.com.msequipamento.msequipamento.model.Equipamento;
+import br.com.msequipamento.msequipamento.model.CondicaoEquipamento;
 import br.com.msequipamento.msequipamento.dto.EquipamentoRequest;
 import br.com.msequipamento.msequipamento.dto.EquipamentoResponse;
 import br.com.msequipamento.msequipamento.exception.ConflitoException;
@@ -63,6 +64,13 @@ public class EquipamentoService {
         if (repository.liberar(id, emprestimoId) == 0) {
             buscarEntidade(id);
         }
+    }
+
+    @Transactional
+    public EquipamentoResponse alterarCondicao(UUID id, CondicaoEquipamento condicao) {
+        Equipamento equipamento = buscarEntidade(id);
+        equipamento.setCondicao(condicao);
+        return EquipamentoResponse.de(repository.save(equipamento));
     }
 
     private Equipamento buscarEntidade(UUID id) {

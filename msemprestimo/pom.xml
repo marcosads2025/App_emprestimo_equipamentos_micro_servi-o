@@ -63,6 +63,19 @@
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-loadbalancer</artifactId>
         </dependency>
+        <!-- Resilience4j para Circuit Breaker com OpenFeign -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-circuitbreaker</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-feign</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>

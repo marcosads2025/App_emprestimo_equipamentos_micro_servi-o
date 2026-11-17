@@ -2,6 +2,7 @@ package br.com.msequipamento.msequipamento.controller;
 
 import br.com.msequipamento.msequipamento.dto.EquipamentoRequest;
 import br.com.msequipamento.msequipamento.dto.EquipamentoResponse;
+import br.com.msequipamento.msequipamento.dto.CondicaoEquipamentoRequest;
 import br.com.msequipamento.msequipamento.service.EquipamentoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -44,5 +45,11 @@ public class EquipamentoController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void liberar(@PathVariable UUID id, @PathVariable UUID emprestimoId) {
         service.liberar(id, emprestimoId);
+    }
+
+    /** RF11 — Endpoint para alterar a condição do equipamento (BOM ou AVARIADO) */
+    @PutMapping("/{id}/condicao")
+    public EquipamentoResponse alterarCondicao(@PathVariable UUID id, @RequestBody @Valid CondicaoEquipamentoRequest request) {
+        return service.alterarCondicao(id, request.condicao());
     }
 }

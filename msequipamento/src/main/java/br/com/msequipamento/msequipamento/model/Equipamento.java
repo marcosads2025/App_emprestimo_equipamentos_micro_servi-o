@@ -37,4 +37,8 @@ public class Equipamento {
     @JdbcTypeCode(SqlTypes.CHAR)
     @Column(name = "emprestimo_id", length = 36)
     private UUID emprestimoId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private CondicaoEquipamento condicao = CondicaoEquipamento.BOM;
 }
